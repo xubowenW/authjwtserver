@@ -1,7 +1,7 @@
 package com.xu.springsecurity.authjwtserver;
 
 import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,19 +33,24 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.io.File;
+import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.KeyPair;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.RSAPrivateKeySpec;
 import java.security.spec.RSAPublicKeySpec;
+import java.text.ParseException;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import com.nimbusds.jose.jwk.JWKSet;
-import com.nimbusds.jose.jwk.RSAKey;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 /**
  * @program: authjwtserver
@@ -111,7 +116,9 @@ public class AuthorizationServerConfiguration extends AuthorizationServerConfigu
     @Bean
     public JwtAccessTokenConverter accessTokenConverter() {
         JwtAccessTokenConverter converter = new JwtAccessTokenConverter();
-        converter.setKeyPair(this.keyPair);
+       converter.setKeyPair(this.keyPair);
+        //converter.setSigningKey("secretly");//不安全的密钥
+       // converter.setSigningKey("P8CjKSfWJJ7yWVM2QrzcVFACT-mZCAT1W7l4dXE3D3Ll5ji78zC5Nk2bivRHJfcIhc_Zepgtd80oUPB9pQ2raGh47FdQ4xCQAzcG1h5xV9bkFM68zFYOmGNf572oQ8E3kIHIOLBVh1kJZ0XfHj3dAcWUqQOjPft47SF_q5fTPkxG3N-eUTuK6qyjrxhCXHywZiLBv8Ax3TUmqq4Sqaydx7tHVGI3gb13PwaLxRHFeJAF9mMw5O8tJWZ0t7RL--m1q6SNNyDzFR-4OEIIR2s4K68ORD9Sd08cLEnUnuHKUHpaog22JnL6VVW9f6cAK41EW5A_zsmldpJM90y-S0abp3I");
 
         DefaultAccessTokenConverter accessTokenConverter = new DefaultAccessTokenConverter();
         accessTokenConverter.setUserTokenConverter((UserAuthenticationConverter) new SubjectAttributeUserTokenConverter());
@@ -209,7 +216,23 @@ class JwkSetEndpoint {
  */
 @Configuration
 class KeyConfig {
+
     @Bean
+    KeyPair keyPair() throws IOException, ParseException, JOSEException {
+        JWKSet localKeys = JWKSet.load(new File("src/main/resources/newprivateKeySet.json"));
+        List<JWK> matches = new JWKSelector(
+                new JWKMatcher.Builder()
+                .keyType(KeyType.RSA)
+                .keyID("845d94b2-d2fa-4334-b344-5ed064bddf4d")
+                .build()).select(localKeys);
+        JWK rsaJWK = matches.get(0);
+        RSAKey rsaKey = rsaJWK.toRSAKey();
+        KeyPair keyPair = rsaKey.toKeyPair();
+        return keyPair;
+    }
+
+
+   /* @Bean
     KeyPair keyPair() {
 
         try {
@@ -242,6 +265,35 @@ class KeyConfig {
                     "JzvNQw4dZfdAjreL8wqXFGrP+K87rx8xJwyt1GgZZPrxEI6aXdQkMxJD7r6qxyWM\n" +
                     "EioxZ/slxV596Yye088nJIE=\n" +
                     "-----END PRIVATE KEY-----");
+            JWK jwk1 = JWK.parseFromPEMEncodedObjects("-----BEGIN PRIVATE KEY-----\n" +
+                    "MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCMsLyZrdpaXsdy\n" +
+                    "E4VHio7dAXcnW656CeeAwjmwWxFr7u1PNCBK/HLKFes9j0GnmzIqLdKjCklKA1gU\n" +
+                    "vjriDL9VbMLwScDCZSFlP4yROwU35IlETh9An6VcE96QkX/Wq0udBeuZBYfWIg/y\n" +
+                    "UB4uiOgSEh4BlpFYZ1Z9zxbnuRL/iYy5HTLKLT05mPDAWVi8h89fcnFBB9WhXjlP\n" +
+                    "98BcFKYOUwJD+ruaBiCpZaGNfHBksQ5xirdNdctmwjtrAzNuQwnfz1+p3af7N5G+\n" +
+                    "jwejwqf5R05wqVqxtGbdBkAFGx9A8C0n80s5Dzd+qxSOBj6sG4XaReaRj+vM6F37\n" +
+                    "2i3Q62VPAgMBAAECggEAIlxP06C4QXYAdAX8eRqIBcYD2eL0W+3rUnEdMcssGBZE\n" +
+                    "cyGh+W5qgpyT1XcVa9/lgpOqbBNpDuB+NKK5Mtg2KqDjg1gf8dpNK7M3m4i0n4/7\n" +
+                    "TmleDKRw+GoJ43kFpeI0F2eIwNiu8kdjaaTTmj3pn/A4z958JQEoCJX5XCLBVxNe\n" +
+                    "LlB0kJBec7pze8mQEm8bKD3ahzQrs/h9np3Fqln9KKjafqF83dFfyl36b3J6lQR+\n" +
+                    "j61faVRduVbYS0FpuWWmUSKebeclRqnGfNCJrGC9d3+gzsI5ltLj4dxGYBL12Fx7\n" +
+                    "dPTkH1qHY2mgrBoAxqIlLgu/4WiMHTtc7eNm77jUsQKBgQDHyNYhFF0FPROGN4mN\n" +
+                    "rsQWa/3hJ6AwMT0GzYoncbQPDjTitvsII5Mi8BNxHzttUKCuUdALfCNAlfBirniQ\n" +
+                    "G/V6gBVQCPNd0d3xdVxUjHbtnJ5wFsHJWhhkHlnRaLF0lCSdzbnwRpr4pDwjj4QM\n" +
+                    "Ua/mxqWCfTSsQ8Pmm0Gdq5Pk4wKBgQC0RyWYfcmUt9QWVpLj6JNc9sQSoBhdjwbo\n" +
+                    "4yto3hl006+mc9MV9wFP34zoBN7vs6KJENsW7yu5VLqpQ8Jw/cz5DLwlsSPRN8q3\n" +
+                    "oLNpWBCd21i71HdQ9zCdnmUotix5lZEOi7Q0NKipeF+2t2NxMw93iVPYRf626yFM\n" +
+                    "A3k7zrjVpQKBgQDDZqBgfE06yXDmLj2gUNXC5F7Mr/gSCqaYl8HPMHue2hNJxxQh\n" +
+                    "8sF/Q3aQhq6WDW0K8kPcZ88G5V/W9LRApsfix5GQ1SBKm/BKsLHclAHiBvRDx05E\n" +
+                    "RJVknvbURWSDFD34BfYdlsEN/XxAf6b0cZTsz0+kIBe7gRAC5ck4kE83ZwKBgFNG\n" +
+                    "Ph6XlEMnO0fqS8YNS+z4bA/yde7Zv6ZaMVYqqfWmRxALlqkhxTBhIlSW02hEQUMx\n" +
+                    "TxLj/f2JHwRLMYlCI6mzcUGz9siRDgoOqHFz5ZEVnoJ9HXSACqv0W+QXaqnrJetj\n" +
+                    "KyWmYXaPDR94zO2gWXetLtbLVmKmcGYNgLXYwtalAoGATyzNq8cwGhCqYzTdPjaI\n" +
+                    "O10Gungm+NLlkgMY86qIogsuj/09B44hvhMzZ+nnrALOpwRpohLvHn6oTIKmsC5G\n" +
+                    "s+BSX3+xlaM903m19Pea8O6j0Ys8hBCf71bCTJV6l7IbABV2OT7sToXBRGhjdoZD\n" +
+                    "lO4Skn5Irq+2KizqcL2dd1c=\n" +
+                    "-----END PRIVATE KEY-----");
+
 
             RSAKey rsaKey = jwk.toRSAKey();
             KeyPair keyPair = rsaKey.toKeyPair();
@@ -250,7 +302,7 @@ class KeyConfig {
             e.printStackTrace();
             throw new IllegalArgumentException(e);
         }
-        /*
+        *//*
         try {
 
 
@@ -269,9 +321,9 @@ class KeyConfig {
 
             throw new IllegalArgumentException(e);
         }
-        */
+        *//*
 
-    }
+    }*/
 }
 
 /**
@@ -285,7 +337,6 @@ class SubjectAttributeUserTokenConverter extends DefaultUserAuthenticationConver
     public Map<String, ?> convertUserAuthentication(Authentication authentication) {
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("sub", authentication.getName());
-        response.put("iss","spring");
         if (authentication.getAuthorities() != null && !authentication.getAuthorities().isEmpty()) {
             response.put(AUTHORITIES, AuthorityUtils.authorityListToSet(authentication.getAuthorities()));
         }
